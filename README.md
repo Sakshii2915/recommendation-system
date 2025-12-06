@@ -4,7 +4,7 @@ A production-ready, scalable real-time recommendation system built with FastAPI,
 
 ## 🚀 Live Demo
 
-**🌐 Live API**: [https://recommendation-system-bl8w.onrender.com](https://recommendation-system-bl8w.onrender.com)
+**🌐 Live API**: [https://recommendation-system-bl8w.onrender.com/docs](https://recommendation-system-bl8w.onrender.com/docs)
 
 **📚 Interactive API Documentation**: [https://recommendation-system-bl8w.onrender.com/docs](https://recommendation-system-bl8w.onrender.com/docs)
 
