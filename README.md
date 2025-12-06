@@ -4,9 +4,16 @@ A production-ready, scalable real-time recommendation system built with FastAPI,
 
 ## 🚀 Live Demo
 
-**API Documentation**: https://recommendation-system-bl8w.onrender.com/docs
+**🌐 Live API**: [https://recommendation-system-bl8w.onrender.com](https://recommendation-system-bl8w.onrender.com)
 
-**Base URL**: https://recommendation-system-bl8w.onrender.com
+**📚 Interactive API Documentation**: [https://recommendation-system-bl8w.onrender.com/docs](https://recommendation-system-bl8w.onrender.com/docs)
+
+**✅ Health Check**: [https://recommendation-system-bl8w.onrender.com/](https://recommendation-system-bl8w.onrender.com/)
+
+Try it out:
+- View interactive API docs with Swagger UI
+- Test endpoints directly from the browser
+- Track events and get recommendations
 
 ## 🏗️ Architecture
 
