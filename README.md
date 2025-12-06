@@ -2,6 +2,12 @@
 
 A production-ready, scalable real-time recommendation system built with FastAPI, AWS Lambda, DynamoDB, and collaborative filtering. This system is designed to handle high-volume user activity and generate personalized recommendations with sub-100ms response times.
 
+## 🚀 Live Demo
+
+**API Documentation**: https://recommendation-system-bl8w.onrender.com/docs
+
+**Base URL**: https://recommendation-system-bl8w.onrender.com
+
 ## 🏗️ Architecture
 
 ### Components
