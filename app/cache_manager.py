@@ -38,9 +38,11 @@ class CacheManager:
                 )
                 logger.info(f"DAX client initialized: {self.dax_endpoint}")
             except ImportError:
-                logger.warning("DAX client not available. Install amazon-dax-client package.")
+                logger.warning("DAX client not available. Install amazon-dax-client package separately if needed.")
+                self.dax_client = None
             except Exception as e:
                 logger.warning(f"Failed to initialize DAX client: {e}")
+                self.dax_client = None
     
     def get(self, key: str) -> Optional[Any]:
         """

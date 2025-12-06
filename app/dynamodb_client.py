@@ -45,7 +45,7 @@ class DynamoDBClient:
                 )
                 logger.info(f"Using DAX endpoint: {dax_endpoint}")
             except ImportError:
-                logger.warning("DAX not available, using regular DynamoDB")
+                logger.warning("DAX not available, using regular DynamoDB. Install amazon-dax-client separately if needed.")
                 self.dynamodb = boto3.resource('dynamodb', region_name=self.region)
             except Exception as e:
                 logger.warning(f"DAX initialization failed: {e}, using regular DynamoDB")
