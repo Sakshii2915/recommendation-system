@@ -1,0 +1,48 @@
+═══════════════════════════════════════════════════════════
+  HOW TO USE YOUR RECOMMENDATION SYSTEM
+═══════════════════════════════════════════════════════════
+
+EASIEST WAY (No typing needed!):
+───────────────────────────────────────────────────────────
+1. Double-click: RUN_EXAMPLE.bat
+   OR
+2. Open browser: http://localhost:8000/docs
+
+───────────────────────────────────────────────────────────
+
+IF YOU WANT TO TYPE COMMANDS:
+───────────────────────────────────────────────────────────
+
+Step 1: Open PowerShell
+   • Press Windows Key + X
+   • Click "Windows PowerShell" or "Terminal"
+
+Step 2: Go to project folder
+   • Type: cd C:\Users\saras\Desktop\recommendation_system
+   • Press Enter
+
+Step 3: Run commands
+   • Type: python example_client.py
+   • Press Enter
+
+───────────────────────────────────────────────────────────
+
+TEST MANUALLY (PowerShell commands):
+───────────────────────────────────────────────────────────
+
+Track an event:
+   Invoke-WebRequest -Uri http://localhost:8000/events -Method POST -ContentType "application/json" -Body '{"user_id":"test","item_id":"item1","event_type":"view"}'
+
+Get recommendations:
+   Invoke-WebRequest -Uri http://localhost:8000/recommendations -Method POST -ContentType "application/json" -Body '{"user_id":"test","limit":5}'
+
+───────────────────────────────────────────────────────────
+
+BEST OPTION: Use Browser!
+───────────────────────────────────────────────────────────
+Just open: http://localhost:8000/docs
+
+This gives you a nice web interface - no commands needed!
+
+═══════════════════════════════════════════════════════════
+

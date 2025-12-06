@@ -1,6 +1,7 @@
 """
 DynamoDB Client for storing and retrieving user events
 Optimized for low-latency reads and writes
+Supports local storage mode for testing without AWS
 """
 import os
 import logging
@@ -18,6 +19,17 @@ class DynamoDBClient:
     """DynamoDB client for user events and recommendations"""
     
     def __init__(self):
+        # Check if local mode is enabled
+        use_local = os.getenv('USE_LOCAL_STORAGE', 'false').lower() == 'true'
+        
+        if use_local:
+            logger.info("Using local storage mode (no AWS required)")
+            from app.local_storage import LocalStorage
+            self.local_storage = LocalStorage()
+            self.use_local = True
+            return
+        
+        self.use_local = False
         self.region = os.getenv('AWS_REGION', 'us-east-1')
         self.events_table = os.getenv('EVENTS_TABLE_NAME', 'UserEvents')
         self.recommendations_table = os.getenv('RECOMMENDATIONS_TABLE_NAME', 'UserRecommendations')
@@ -55,6 +67,9 @@ class DynamoDBClient:
     
     def is_connected(self) -> bool:
         """Check if DynamoDB connection is active"""
+        if self.use_local:
+            return True  # Local storage is always "connected"
+        
         try:
             if self.events_table_resource:
                 self.events_table_resource.meta.client.describe_table(TableName=self.events_table)
@@ -71,7 +86,7 @@ class DynamoDBClient:
         metadata: Dict = None
     ) -> bool:
         """
-        Store user event in DynamoDB
+        Store user event in DynamoDB or local storage
         
         Args:
             user_id: User identifier
@@ -83,6 +98,11 @@ class DynamoDBClient:
         Returns:
             True if successful
         """
+        if self.use_local:
+            return self.local_storage.put_user_event(
+                user_id, item_id, event_type, timestamp, metadata
+            )
+        
         try:
             event_id = f"{user_id}_{item_id}_{int(timestamp)}"
             
@@ -130,6 +150,9 @@ class DynamoDBClient:
         Returns:
             List of user events
         """
+        if self.use_local:
+            return self.local_storage.get_user_events(user_id, limit)
+        
         try:
             if not self.events_table_resource:
                 self._initialize_tables()
@@ -178,6 +201,9 @@ class DynamoDBClient:
         Returns:
             List of user IDs
         """
+        if self.use_local:
+            return self.local_storage.get_users_by_items(item_ids, limit)
+        
         try:
             if not self.events_table_resource:
                 self._initialize_tables()
@@ -219,6 +245,9 @@ class DynamoDBClient:
         Returns:
             List of popular items with scores
         """
+        if self.use_local:
+            return self.local_storage.get_popular_items(limit)
+        
         try:
             # In production, this would use a pre-computed popular items table
             # For now, return sample data
