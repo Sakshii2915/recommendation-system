@@ -1,0 +1,238 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Real-time Recommendation System with FastAPI, Lambda, and DynamoDB
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.11
+    Environment:
+      Variables:
+        EVENTS_TABLE_NAME: !Ref UserEventsTable
+        RECOMMENDATIONS_TABLE_NAME: !Ref UserRecommendationsTable
+        CACHE_TABLE_NAME: !Ref RecommendationCacheTable
+        AWS_REGION: !Ref AWS::Region
+
+Resources:
+  # DynamoDB Tables
+  UserEventsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: UserEvents
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: event_id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: item_id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: N
+      KeySchema:
+        - AttributeName: event_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user_id-timestamp-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: item_id-timestamp-index
+          KeySchema:
+            - AttributeName: item_id
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  UserRecommendationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: UserRecommendations
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+
+  RecommendationCacheTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: RecommendationCache
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: cache_key
+          AttributeType: S
+      KeySchema:
+        - AttributeName: cache_key
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # Lambda Function for Stream Processing
+  StreamProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: RecommendationStreamProcessor
+      CodeUri: lambda_functions/
+      Handler: stream_processor.lambda_handler
+      Runtime: python3.11
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          RECOMMENDATIONS_TABLE_NAME: !Ref UserRecommendationsTable
+          CACHE_TABLE_NAME: !Ref RecommendationCacheTable
+          AWS_REGION: !Ref AWS::Region
+      Events:
+        StreamEvent:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt UserEventsTable.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 10
+            MaximumBatchingWindowInSeconds: 5
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserRecommendationsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RecommendationCacheTable
+
+  # API Gateway for FastAPI (using Lambda Function URL or ECS)
+  # Note: For production, you might want to deploy FastAPI on ECS Fargate or use API Gateway with Lambda
+  # This is a simplified version - you may need to adjust based on your deployment strategy
+  
+  # CloudWatch Dashboard
+  RecommendationDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: RecommendationSystemDashboard
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["RecommendationSystem", "RecommendationLatency", {"stat": "Average"}],
+                  [".", ".", {"stat": "p95"}],
+                  [".", ".", {"stat": "p99"}]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "Recommendation Latency"
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["RecommendationSystem", "RecommendationCacheHits", {"stat": "Sum"}],
+                  [".", "RecommendationCacheMisses", {"stat": "Sum"}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Cache Performance"
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["RecommendationSystem", "EventsIngested", {"stat": "Sum"}],
+                  [".", "RecommendationsGenerated", {"stat": "Sum"}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "Throughput"
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["RecommendationSystem", "EventIngestionLatency", {"stat": "Average"}],
+                  [".", "RecommendationErrors", {"stat": "Sum"}],
+                  [".", "EventIngestionErrors", {"stat": "Sum"}]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "Error Rates and Latency"
+              }
+            }
+          ]
+        }
+
+  # IAM Role for Lambda
+  StreamProcessorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDBStreamAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeStream
+                  - dynamodb:GetRecords
+                  - dynamodb:GetShardIterator
+                  - dynamodb:ListStreams
+                Resource: !GetAtt UserEventsTable.StreamArn
+
+Outputs:
+  UserEventsTableName:
+    Description: User Events DynamoDB Table
+    Value: !Ref UserEventsTable
+    Export:
+      Name: !Sub ${AWS::StackName}-UserEventsTable
+
+  UserRecommendationsTableName:
+    Description: User Recommendations DynamoDB Table
+    Value: !Ref UserRecommendationsTable
+    Export:
+      Name: !Sub ${AWS::StackName}-UserRecommendationsTable
+
+  RecommendationCacheTableName:
+    Description: Recommendation Cache DynamoDB Table
+    Value: !Ref RecommendationCacheTable
+    Export:
+      Name: !Sub ${AWS::StackName}-RecommendationCacheTable
+
+  StreamProcessorFunctionArn:
+    Description: Stream Processor Lambda Function ARN
+    Value: !GetAtt StreamProcessorFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-StreamProcessorFunction
+
+  DashboardURL:
+    Description: CloudWatch Dashboard URL
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=RecommendationSystemDashboard
+
