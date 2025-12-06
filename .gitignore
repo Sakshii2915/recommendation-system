@@ -31,9 +31,13 @@ htmlcov/
 dmypy.json
 .env
 .aws-sam/
-samconfig.toml
 *.log
 .DS_Store
 .vscode/
 .idea/
+
+# Local data and test files
+local_data/
+*.bat
+test_setup.py
 
